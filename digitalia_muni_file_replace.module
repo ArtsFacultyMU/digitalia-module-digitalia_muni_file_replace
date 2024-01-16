@@ -1,0 +1,71 @@
+<?php
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+use Drupal\file\FileInterface;
+use Drupal\file\Plugin\Field\FieldWidget\FileWidget;
+
+/**
+ * @file
+ * Primary module hooks for digitalia_muni_file_replace module.
+ *
+ * @DCG
+ * This file is no longer required in Drupal 8.
+ * @see https://www.drupal.org/node/2217931
+ */
+
+function digitalia_muni_file_replace_field_widget_form_alter(&$element, $form_state, $context) {
+
+  $widget = $context['widget'];
+
+  if (
+    $widget instanceof FileWidget &&
+    isset($element['#default_value']['target_id']) &&
+    \Drupal::currentUser()->hasPermission('replace files')
+  ) {
+    /** @var \Drupal\Core\Routing\RedirectDestinationInterface $request_destination */
+    $request_destination = \Drupal::service('redirect.destination');
+    $route_options = [
+      'query' => [
+        'destination' => $request_destination->get(),
+      ],
+    ];
+    $route_params = [
+      'file' => $element['#default_value']['target_id'],
+    ];
+    $element['replace_button'] = [
+      '#type' => 'link',
+      '#title' => t('Replace'),
+      '#url' => Url::fromRoute('entity.file.replace_form', $route_params, $route_options),
+      '#weight' => 99,
+      '#attributes' => [
+        'class' => ['button', 'button--extrasmall', 'button--danger'],
+        'style' => 'width: fit-content;',
+      ],
+    ];
+
+    // If Node is published, rename the 'Remove' button and hide the 'Replace' button.
+    $media = $form_state->getformObject()->getEntity();
+    if ($media->bundle() != 'document') {
+      return;
+    }
+
+    if (!empty($element['#type']) && $element['#type'] == 'managed_file') {
+      if ($media->get('field_media_of')) {
+        $nid = $media->get('field_media_of')->getValue()[0]['target_id'];
+        $node = \Drupal\node\Entity\Node::load($nid);
+        if ($node->isPublished()) {
+          $element['#process'][] = 'custom_file_buttons_labels';
+          $element['replace_button']['#access'] = FALSE;
+        }
+      }
+    }
+  }
+}
+
+function custom_file_buttons_labels($element, FormStateInterface $form_state, $form) {
+  if (isset($element['remove_button']['#value'])) {
+    $element['remove_button']['#value'] = t('Create new version');
+  }
+  return $element;
+}

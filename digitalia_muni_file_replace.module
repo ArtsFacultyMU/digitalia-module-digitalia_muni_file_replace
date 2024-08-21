@@ -14,7 +14,7 @@ use Drupal\file\Plugin\Field\FieldWidget\FileWidget;
  * @see https://www.drupal.org/node/2217931
  */
 
-function digitalia_muni_file_replace_field_widget_form_alter(&$element, $form_state, $context) {
+function digitalia_muni_file_replace_field_widget_single_element_form_alter(&$element, $form_state, $context) {
 
   $widget = $context['widget'];
 
@@ -52,9 +52,8 @@ function digitalia_muni_file_replace_field_widget_form_alter(&$element, $form_st
 
     if (!empty($element['#type']) && $element['#type'] == 'managed_file') {
       if ($media->get('field_media_of')) {
-        $nid = $media->get('field_media_of')->getValue()[0]['target_id'];
-        $node = \Drupal\node\Entity\Node::load($nid);
-        if ($node->isPublished()) {
+        $node = $media->get('field_media_of')->entity;
+        if ($node and $node->isPublished()) {
           $element['#process'][] = 'custom_file_buttons_labels';
           $element['replace_button']['#access'] = FALSE;
         }
